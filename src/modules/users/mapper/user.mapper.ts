@@ -1,5 +1,6 @@
 import type { User } from "../entity/user.entity.js";
 import type { UserDTO } from '../dto/user.dto.js'
+import type { UpdateUserDTO } from "../dto/updateUser.dto.js";
 
 /**
  * Converts user entities into API response objects.
@@ -20,7 +21,7 @@ export class UserMapper {
             const bucket = encodeURIComponent(user.avatarBucket);
             // Encode each segment separately so spaces and special characters
             // are escaped while "/" separators in the object key are preserved
-            const objectKey = user.avatarBucket
+            const objectKey = user.avatarObject
                 .split('/')
                 .map(segment => encodeURIComponent(segment))
                 .join('/');
