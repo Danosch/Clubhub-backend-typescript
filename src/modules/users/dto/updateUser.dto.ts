@@ -1,5 +1,4 @@
 import {
-    IsEmail,
     IsOptional,
     IsString,
     Length,
@@ -12,10 +11,6 @@ import {
  * Omitted or null fields leave the existing values unchanged.
  */
 export class UpdateUserDTO {
-    @IsOptional()
-    @IsEmail()
-    @MaxLength(255)
-    email?: string | null;
 
     @IsOptional()
     @IsString()
