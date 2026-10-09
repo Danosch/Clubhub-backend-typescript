@@ -20,7 +20,9 @@ async function bootstrap(): Promise<void> {
             forbidNonWhitelisted: true
         })
     );
-
+    app.enableCors({
+        origin: 'http://localhost:3000'
+    })
     app.enableShutdownHooks(); // Graceful shutdown hooks for the application
     await app.listen(8080);
 }
