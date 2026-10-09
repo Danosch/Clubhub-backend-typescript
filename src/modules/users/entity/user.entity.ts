@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 /**
  * Represents a user stored in the users table.
@@ -6,14 +6,14 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
  * Passwords hashes are excluded from queries unless explicitly selected.
  */
 @Entity('users')
+@Unique('users_email_key', ['email'])
 export class User {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
     @Column({
         type: 'varchar',
-        length: 255,
-        unique: true
+        length: 255
     })
     email!: string;
 

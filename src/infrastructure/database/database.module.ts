@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { fileURLToPath } from 'node:url';
 
 @Module({
     imports: [
@@ -16,6 +17,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
                 database: config.getOrThrow<string>('POSTGRES_DB'),
                 autoLoadEntities: true,
                 synchronize: false, // Set to false we will use migrations to manage the database schema
+                migrations: [
+                    fileURLToPath(
+                        new URL('./migrations/[0-9]*-*.js', import.meta.url)
+                    )
+                ],
+                migrationsRun: true
             }),
         }),
     ],

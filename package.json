@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migration:generate": "npm run build && node --env-file=.env ./node_modules/typeorm/cli.js migration:generate -d ./dist/infrastructure/database/dataSource.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.2",
@@ -18,6 +19,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "pg": "^8.23.1",
+    "redis": "^6.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "typeorm": "^1.1.1"
