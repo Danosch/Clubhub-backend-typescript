@@ -1,6 +1,5 @@
 import type { User } from "../entity/user.entity.js";
 import type { UserDTO } from '../dto/user.dto.js'
-import type { UpdateUserDTO } from "../dto/updateUser.dto.js";
 
 /**
  * Converts user entities into API response objects.

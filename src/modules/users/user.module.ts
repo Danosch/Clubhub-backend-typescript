@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { PasswordService } from '../../infrastructure/security/password.service.js';
 import { UserController } from './control/user.controller.js';
 import { User } from './entity/user.entity.js';
 import { UserRepository } from './repository/user.repository.js';
