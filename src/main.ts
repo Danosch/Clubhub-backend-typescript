@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap(): Promise<void> {
     const app = await NestFactory.create(AppModule);
@@ -20,9 +21,24 @@ async function bootstrap(): Promise<void> {
             forbidNonWhitelisted: true
         })
     );
+
+    const frontendOrigin = process.env.FRONTEND_ORIGIN;
+
+    if (!frontendOrigin) {
+        throw new Error('FRONTEND_ORIGIN is required');
+    }
+
     app.enableCors({
-        origin: 'http://localhost:3000'
-    })
+        origin: frontendOrigin,
+        credentials: true
+    });
+
+    app.enableCsrfProtection({
+        trustedOrigins: [frontendOrigin]
+    });
+
+    app.use(cookieParser());
+
     app.enableShutdownHooks(); // Graceful shutdown hooks for the application
     await app.listen(8080);
 }
