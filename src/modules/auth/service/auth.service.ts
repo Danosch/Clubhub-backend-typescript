@@ -4,10 +4,10 @@ import { PasswordService } from '../../../infrastructure/security/password.servi
 import type { CreateUserDTO } from '../../users/dto/createUser.dto.js';
 import { UserRepository } from '../../users/repository/user.repository.js';
 import { UserService } from '../../users/service/user.service.js';
-import { AuthResponseDTO } from '../dto/authResponse.dto.js';
 import type { LoginDTO } from '../dto/login.dto.js';
 import { AuthValidator } from '../validation/auth.validation.js';
 import { SessionService } from './session.service.js';
+import type { UserDTO } from '../../users/dto/user.dto.js';
 
 /**
  * Coordinates registration, credential verification and sessions.
@@ -23,40 +23,51 @@ export class AuthService {
     ) { }
 
     /**
-     * Creates a user and an authentication session.
+     * Registration creates an account; the user signs in afterward.
      */
-    async register(dto: CreateUserDTO): Promise<AuthResponseDTO> {
-        const user = await this.userService.createUser(dto);
-        const token = await this.sessionService.createToken(user.id);
-
-        return new AuthResponseDTO(token);
+    async register(dto: CreateUserDTO): Promise<UserDTO> {
+        return this.userService.createUser(dto);
     }
 
     /**
-     * Verifies credentials and creates an authentication session.
-     *
-     * @throws {UnauthorizedException} If the credentials are invalid.
+     * The token stays inside the backend and is passed to the controller.
      */
-    async login(dto: LoginDTO): Promise<AuthResponseDTO> {
+    async login(dto: LoginDTO): Promise<string> {
         const user = await this.userRepository.findByEmailWithPasswordHash(
-            dto.email,
+            dto.email
         );
-
         const passwordMatches = await this.passwordService.verify(
             dto.password,
-            user?.passwordHash ?? null,
+            user?.passwordHash ?? null
         );
 
         const authenticatedUser =
-            this.authValidator.requireAuthenticatedUser(
-                user,
-                passwordMatches,
-            );
+            this.authValidator.requireAuthenticatedUser(user, passwordMatches);
 
-        const token = await this.sessionService.createToken(
-            authenticatedUser.id,
-        );
+        return this.sessionService.createToken(authenticatedUser.id);
+    }
 
-        return new AuthResponseDTO(token);
+    /**
+    * Revokes the session when the browser sends a session cookie.
+    */
+    async logout(token: string | undefined): Promise<void> {
+        if (token === undefined) {
+            return;
+        }
+        await this.sessionService.revokeToken(token);
+    }
+
+    /**
+     * Renews an active session and returns its token for the response cookie.
+     * 
+     * @param token The token from the session cookie.
+     * @returns The renewed token for internal use by the controller.
+     * @throws {UnauthorizedException} If the session is missing or expired.
+     */
+    async refresh(token: string | undefined): Promise<string> {
+        if (!token || !(await this.sessionService.refreshToken(token))) {
+            throw this.authValidator.invalidToken();
+        }
+        return token;
     }
 }

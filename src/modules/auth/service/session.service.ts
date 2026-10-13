@@ -2,20 +2,23 @@ import { Injectable } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 
 import { SessionRepository } from "../repository/session.repository.js";
+import { SESSION_TTL_SECONDS } from "../auth.constants.js";
 
 /**
  * Creates, validates and revokes authenticaiton sessions.
  */
 @Injectable()
 export class SessionService {
-    private static readonly TOKEN_TTL_SECONDS = 900;
 
     constructor(
         private readonly sessionRepository: SessionRepository
     ) { }
 
     /**
-     * Creates a cryptographically random token and stores its association with the user for 15 minutes.
+     * Creates a random session token and stores if for the configured lifetime.
+     * 
+     * @param userId The ID of the user who owns the session.
+     * @returns The token to send to the browser as a cookie.
      */
     async createToken(userId: string): Promise<string> {
         const token = randomBytes(32).toString('hex');
@@ -23,24 +26,43 @@ export class SessionService {
         await this.sessionRepository.save(
             token,
             userId,
-            SessionService.TOKEN_TTL_SECONDS
+            SESSION_TTL_SECONDS
         );
 
         return token;
     }
 
     /**
-     * Returns the associated user ID, or null if the token is unknown or its session has expired.
+     * Looks up the user associated with an active session.
+     * 
+     * @param token The session token to validate.
+     * @returns THe user ID, or null if the session is missing or expired.
      */
     validateToken(token: string): Promise<string | null> {
         return this.sessionRepository.findUserIdByToken(token);
     }
 
     /**
-     * Invalidates the session and reports whether it existed.
+     * Revokes a session.
+     * 
+     * @param token The session token to revoke.
+     * @returns Whether the session existed and was removed.
      */
     revokeToken(token: string): Promise<boolean> {
         return this.sessionRepository.deleteByToken(token);
+    }
+
+    /**
+     * Renews an existing session for the configured lifetime.
+     * 
+     * @param token The token of the session to renew.
+     * @returns Whether the session was still active.
+     */
+    refreshToken(token: string): Promise<boolean> {
+        return this.sessionRepository.extendExpiration(
+            token,
+            SESSION_TTL_SECONDS
+        );
     }
 
 }

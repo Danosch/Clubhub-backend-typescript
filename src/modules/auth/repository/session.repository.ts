@@ -63,4 +63,27 @@ export class SessionRepository {
 
         return `auth:session:${tokenHash}`;
     }
+
+    /**
+     * Extends the expiration of an existing session.
+     * 
+     * @param token The session token whose Redis key should be renewed.
+     * @param ttlSeconds The new lifetime in seconds.
+     * @returns Whether the session existed and its expiration was updated.
+    */
+    async extendExpiration(
+        token: string,
+        ttlSeconds: number
+    ): Promise<boolean> {
+        const updated = await this.redis.client.expire(
+            this.createKey(token),
+            ttlSeconds
+        );
+
+        return updated === 1;
+    }
+
+
+
+
 }
