@@ -23,7 +23,9 @@ export class CreateUserDTO {
     username!: string;
 
     @IsString()
-    @Length(15, 128)
+    // Development: allow passwords with at least 6 characters.
+    // Production: change the minimum to 15 before deployment
+    @Length(6, 128)
     password!: string;
 
 }
