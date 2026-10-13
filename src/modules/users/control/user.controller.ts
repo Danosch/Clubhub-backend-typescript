@@ -1,6 +1,7 @@
 import { Controller, Get, Param, ParseUUIDPipe } from "@nestjs/common";
 import type { UserDTO } from "../dto/user.dto.js";
 import { UserService } from "../service/user.service.js";
+import { CurrentUserId } from "../../../common/decorator/currentUserId.decorator.js";
 
 /**
  * Handles HTTP requests for user profiles.
@@ -22,6 +23,14 @@ export class UserController {
         return this.userService.getAllUsers();
     }
 
+    /**
+     * Returns the profile associated with the authenticated session.
+     */
+    @Get('me')
+    getCurrentUser(
+        @CurrentUserId() userId: string): Promise<UserDTO> {
+        return this.userService.getUserById(userId);
+    }
 
     /**
      * Returns the profile associated with the given user ID.
