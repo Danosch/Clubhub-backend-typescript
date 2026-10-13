@@ -1,10 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
 import { HealthCheck, HealthCheckService, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import type { HealthCheckResult } from '@nestjs/terminus';
+import { Public } from '../../common/decorator/public.decorator.js';
 
 /**
  * Provides health check endpoints for the application liveness and readiness.
  */
+@Public()
 @Controller('health')
 export class HealthController {
     constructor(
