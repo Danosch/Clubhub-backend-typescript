@@ -37,4 +37,17 @@ export class AuthValidator {
             sourcePointer: null,
         });
     }
+
+    /**
+     * Creates the rror for missing, invalid or expired sessions.
+     */
+    invalidToken(): UnauthorizedException {
+        return new UnauthorizedException({
+            errorCode: ClubHubErrorCode.INVALID_TOKEN,
+            title: 'Invalid authentication token',
+            details: 'The authentication token is missing, invalid or expired.',
+            messageParameters: {},
+            sourcePointer: null
+        });
+    }
 }

@@ -8,6 +8,8 @@ import { AuthService } from './service/auth.service.js';
 import { SessionService } from './service/session.service.js';
 import { SecurityModule } from '../../infrastructure/security/security.module.js';
 import { AuthValidator } from './validation/auth.validation.js';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './guard/auth.guard.js';
 
 /**
  * Registers the components required for authentication.
@@ -26,6 +28,10 @@ import { AuthValidator } from './validation/auth.validation.js';
         AuthValidator,
         SessionService,
         SessionRepository,
+        {
+            provide: APP_GUARD,
+            useClass: AuthGuard
+        }
     ],
 })
 export class AuthModule { }

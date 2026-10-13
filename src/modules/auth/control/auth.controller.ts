@@ -3,6 +3,7 @@ import { AuthService } from "../service/auth.service.js";
 import { CreateUserDTO } from "../../users/dto/createUser.dto.js";
 import { AuthResponseDTO } from "../dto/authResponse.dto.js";
 import { LoginDTO } from "../dto/login.dto.js";
+import { Public } from "../../../common/decorator/public.decorator.js";
 
 /**
  * Handles registration and authentication requests.
@@ -17,6 +18,7 @@ export class AuthController {
      * Registers a user and creates an authentication session.
      * @returns HTTP 201 with the authentication token.    
     */
+    @Public()
     @Post('register')
     register(@Body() dto: CreateUserDTO): Promise<AuthResponseDTO> {
         return this.authService.register(dto);
@@ -28,6 +30,7 @@ export class AuthController {
      *
      * @returns HTTP 200 with the authentication token.
      */
+    @Public()
     @Post('login')
     @HttpCode(HttpStatus.OK)
     login(@Body() dto: LoginDTO): Promise<AuthResponseDTO> {
