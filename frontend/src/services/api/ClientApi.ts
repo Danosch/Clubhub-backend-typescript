@@ -1,22 +1,26 @@
 import { ApiError } from './ApiError';
 
 /**
- * Small wrapper for `fetch` that centralizes API base URL resolution and
- * bearer-token handling for requests.
- *
- * Base URL resolution order (the '/api' suffix is always appended):
- * - Constructor `base` argument, when provided
- * - `import.meta.env.VITE_API_URL`, when defined (Vite)
- * - Fallback `http://localhost:8080`
+ * Fetch options for requests that may suppress the global 401 callback.
+ */
+type ApiRequestOptions = RequestInit & {
+  skipUnauthorizedCallback?: boolean;
+};
+
+
+/**
+ * Wraps fetch for ClubHub API requests.
+ * 
+ * Resolves the API base URL, includes browser cookies and converts
+ * unsuccessful HTTP responses into ApiError instances.
  */
 export class ClientApi {
   /** Resolved API base URL including the '/api' suffix (no trailing slash). */
   public readonly baseUrl: string;
 
   /**
-   * Optional callback invoked when a request receives a 401 Unauthorized.
-   * The access token is cleared before this callback runs. Useful for
-   * triggering logout flows or redirecting to a sign-in page.
+   * Calles when an API request returns HTTP 401.
+   * The auth provider uses this to mark the session as unauthenticated.
    */
   public onUnauthorized?: () => void;
 
@@ -35,80 +39,37 @@ export class ClientApi {
     this.baseUrl = `${root}/api`;
   }
 
-  /** In-memory bearer token used for Authorization header. */
-  private static accessToken: string | null = null;
-
   /**
-   * Set (or clear) the bearer access token. The token is stored in
-   * `localStorage` under the key `access_token`.
-   *
-   * Call after login/registration, and pass `null` on logout.
-   *
-   * @param token The access token string, or `null` to clear it.
+   * Sends a API request with the browser's session cookie.
+   * 
+   * @typeParam T Expected response data.
+   * @param path Relative API path or absolute URL.
+   * @param options Fetch options and optional 401 callback supression.
+   * @returns Parsed response data, or undefined for HTTP 204.
+   * @throws {ApiError} When the server returns a non 2-xx response.
    */
-  static setAuthToken(token: string | null) {
-    ClientApi.accessToken = token;
-    try {
-      if (token) localStorage.setItem('access_token', token);
-      else localStorage.removeItem('access_token');
-    } catch {}
-  }
-
-  /**
-   * Restore a previously persisted token from `localStorage` into memory.
-   * Safe to call during application bootstrap.
-   */
-  static bootstrapTokenFromStorage() {
-    try {
-      const t = localStorage.getItem('access_token');
-      ClientApi.accessToken = t;
-    } catch {}
-  }
-
-  /**
-   * Perform an HTTP request against the API.
-   *
-   * Behavior:
-   * - Accepts a relative `path` (joined to `baseUrl`) or an absolute URL.
-   * - Adds `Authorization: Bearer <token>` when a token is set.
-   * - Sets `Content-Type: application/json` when the body is not `FormData`
-   *   and no `Content-Type` is already provided.
-   * - Does not JSON-serialize the body for you; provide a string body if
-   *   sending JSON (e.g., `body: JSON.stringify(payload)`).
-   * - On 401: clears the token and invokes `onUnauthorized`.
-   * - On non-2xx: throws `ApiError` with the status and a parsed message.
-   * - On 204: resolves to `undefined`.
-   *
-   * @typeParam T Expected JSON shape of the successful response.
-   * @param path Relative API path (e.g., `/users`) or absolute URL.
-   * @param options Standard `fetch` options.
-   * @returns Parsed JSON as `T`, or `undefined` for 204 responses.
-   * @throws ApiError When the response is not OK (non-2xx).
-   */
-  async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+    const { skipUnauthorizedCallback = false, ...fetchOptions } = options;
     const isAbsolute = /^https?:\/\//i.test(path);
     const url = isAbsolute
       ? path
       : `${this.baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string>),
-    };
+    const headers = new Headers(fetchOptions.headers);
+    const isForm =
+      typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
 
-    // Only set JSON header if the body is not FormData and header not provided
-    const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
-    if (!isForm && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
+    if (fetchOptions.body != null && !isForm && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
     }
 
-    if (ClientApi.accessToken) {
-      headers['Authorization'] = `Bearer ${ClientApi.accessToken}`;
-    }
+    const res = await fetch(url, {
+      ...fetchOptions,
+      headers,
+      credentials: 'include',
+    });
 
-    const res = await fetch(url, { ...options, headers });
-    // Invoke callback and clear token when session is invalid
-    if (res.status === 401) {
-      ClientApi.setAuthToken(null);
+    if (res.status === 401 && !skipUnauthorizedCallback) {
       this.onUnauthorized?.();
     }
 
@@ -136,7 +97,3 @@ export class ClientApi {
 
 /** Shared ClientApi instance configured from environment variables. */
 export const clientApi = new ClientApi();
-
-// handy re-export
-export const setAuthToken = ClientApi.setAuthToken;
-ClientApi.bootstrapTokenFromStorage();

@@ -1,100 +1,118 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '../services/AuthService';
-import { setAuthToken, clientApi } from '../../../services/api';
+import { clientApi } from '../../../services/api';
 
-/** Context value exposed by the auth provider. */
+type AuthStatus = 'checking' | 'authenticated' | 'anonymous';
+
+/** Authentication state and actions available to components. */
 interface AuthContextValue {
-  token: string | null;
+  status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
-  register: (
-    name: string,
-    email: string,
-    password: string
-  ) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /**
- * Provider that manages the auth token lifecycle, including persistence,
- * refresh, and global 401 handling via `clientApi.onUnauthorized`.
+ * Verifies the cookie session on startup and manages authentication actions.
+ *
+ * @param children Components that need authentication state.
+ * @returns The authentication context provider.
  */
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('access_token');
-    } catch {
-      return null;
-    }
-  });
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [status, setStatus] = useState<AuthStatus>('checking');
 
   useEffect(() => {
-    setAuthToken(token);
-  }, [token]);
+    let active = true;
 
-  // handle 401 responses globally
-  useEffect(() => {
     clientApi.onUnauthorized = () => {
-      setToken(null);
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      if (active) setStatus('anonymous');
     };
+
+    // Remove a token left by the old bearer-token frontend.
+    try {
+      localStorage.removeItem('access_token');
+    } catch {
+      // Storage may be unavailable; authentication does not depend on it.
+    }
+
+    void authService
+      .checkSession()
+      .then(() => {
+        if (active) setStatus('authenticated');
+      })
+      .catch(() => {
+        if (active) setStatus('anonymous');
+      });
+
     return () => {
+      active = false;
       clientApi.onUnauthorized = undefined;
     };
   }, []);
 
-  // automatically refresh auth token every 15 minutes
   useEffect(() => {
-    if (!token) return;
-    const handle = setInterval(async () => {
-      try {
-        const res = await authService.refresh(token);
-        setToken(res.token);
-      } catch {
-        setToken(null);
-      }
-    }, 13 * 60 * 1000);
-    return () => clearInterval(handle);
-  }, [token]);
+    if (status !== 'authenticated') return;
 
-  /** Sign in with credentials and update the token. */
-  const login = async (email: string, password: string) => {
-    const result = await authService.login(email, password);
-    setToken(result.token);
+    const handle = window.setInterval(() => {
+      void authService.refresh().catch((error: unknown) => {
+        // A 401 also triggers the API client's callback and clears auth state.
+        console.warn('Session refresh failed:', error);
+      });
+    }, 13 * 60 * 1000);
+
+    return () => window.clearInterval(handle);
+  }, [status]);
+
+  /**
+   * Signs in and marks the cookie session as active.
+   *
+   * @param email User's email address.
+   * @param password User's password.
+   */
+  const login = async (email: string, password: string): Promise<void> => {
+    await authService.login(email, password);
+    setStatus('authenticated');
   };
 
-  /** Register a new account. */
+  /**
+   * Registers a user without signing them in.
+   *
+   * @param name Display name.
+   * @param email User's email address.
+   * @param password User's password.
+   */
   const register = async (
     name: string,
     email: string,
     password: string
-  ) => {
+  ): Promise<void> => {
     await authService.register(name, email, password);
   };
 
-  /** Log out and clear any persisted token. */
-  const logout = async () => {
-    if (token) {
-      try {
-        await authService.logout(token);
-      } catch {}
-    }
-    setToken(null);
+  /** Revokes the session before marking the user as signed out. */
+  const logout = async (): Promise<void> => {
+    await authService.logout();
+    setStatus('anonymous');
   };
 
   return (
-    <AuthContext.Provider value={{ token, login, register, logout }}>
+    <AuthContext.Provider value={{ status, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-/** Hook to access the authentication context. */
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
+/**
+ * Reads authentication state from the provider.
+ *
+ * @returns The current authentication state and actions.
+ */
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used inside AuthProvider');
+  return context;
 }

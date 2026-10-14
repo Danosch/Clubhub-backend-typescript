@@ -1,58 +1,77 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { User } from '../types';
 import { profileService } from '../services/ProfileService';
 import { useAuth } from '../../auth/hooks/useAuth';
 
-/** Context value with the current user and profile actions. */
+/** Current user profile and actions available to components. */
 type ProfileContextValue = {
   user: User | null;
-  updateUser: (u: User) => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
   updateAvatar: (file: File) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
-const ProfileContext = createContext<ProfileContextValue | undefined>(undefined);
+const ProfileContext = createContext<ProfileContextValue | undefined>(
+  undefined
+);
 
 /**
- * Provider that loads the authenticated user's profile and exposes
- * helpers to update the profile and avatar.
+ * Loads the current profile while the user has an authenticated session.
+ *
+ * @param children Components that need access to the profile.
  */
-export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
-  const { token } = useAuth();
+  const { status } = useAuth();
 
-  /** Fetch and store the latest user profile. */
-  const refresh = async () => {
-    const u = await profileService.getCurrent();
-    setUser(u);
+  /** Fetches and stores the latest profile. */
+  const refresh = async (): Promise<void> => {
+    const profile = await profileService.getCurrent();
+    setUser(profile);
   };
 
-  // fetch user whenever token changes
   useEffect(() => {
-    if (!token) {
+    if (status !== 'authenticated') {
       setUser(null);
       return;
     }
+
     let active = true;
-    refresh().catch(() => {
-      if (active) setUser(null);
-    });
+
+    void profileService
+      .getCurrent()
+      .then(profile => {
+        if (active) setUser(profile);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [status]);
 
-  // updateUser calls service then updates context
-  /** Persist profile changes and update the context value. */
-  const updateUser = async (updated: User) => {
+  /**
+   * Persists profile changes and updates the context.
+   *
+   * @param updated Profile data to save.
+   */
+  const updateUser = async (updated: User): Promise<void> => {
     const saved = await profileService.updateCurrent(updated.id, updated);
     setUser(saved);
   };
 
-  // upload new avatar and update context
-  /** Upload a new avatar image and update the context value. */
-  const updateAvatar = async (file: File) => {
+  /**
+   * Uploads a new avatar and updates the context.
+   *
+   * @param file Avatar image to upload.
+   */
+  const updateAvatar = async (file: File): Promise<void> => {
     if (!user) return;
+
     const saved = await profileService.updateAvatar(user.id, file);
     setUser(saved);
   };
@@ -64,9 +83,15 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
-/** Hook to access the current profile context. */
-export function useProfile() {
-  const ctx = useContext(ProfileContext);
-  if (!ctx) throw new Error('useProfile must be used inside ProfileProvider');
-  return ctx;
+/**
+ * Reads the current profile context.
+ *
+ * @returns The profile and its actions.
+ */
+export function useProfile(): ProfileContextValue {
+  const context = useContext(ProfileContext);
+  if (!context) {
+    throw new Error('useProfile must be used inside ProfileProvider');
+  }
+  return context;
 }

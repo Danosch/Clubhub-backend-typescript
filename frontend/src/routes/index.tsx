@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import ExplorePage from '../features/clubs/pages/ExplorePage';
@@ -25,18 +24,31 @@ import { useAuth } from '../features/auth/hooks/useAuth';
  * Includes public auth routes and protected sections wrapped by `RequireAuth`.
  */
 export default function AppRoutes() {
-  const { token } = useAuth();
+  const { status } = useAuth();
+
+  if (status === 'checking') {
+    return <div role="status">Checking session...</div>
+  }
+
   return (
     <BrowserRouter>
       <AppLayout>
         <Routes>
           <Route
             path="/login"
-            element={token ? <Navigate to="/explore" replace /> : <LoginPage />}
+            element={
+              status === 'authenticated'
+                ? <Navigate to="/explore" replace />
+                : <LoginPage />
+            }
           />
           <Route
             path="/register"
-            element={token ? <Navigate to="/explore" replace /> : <RegisterPage />}
+            element={
+              status === 'authenticated'
+                ? <Navigate to="/explore" replace />
+                : <RegisterPage />
+            }
           />
           <Route element={<RequireAuth />}>
             <Route path="/" element={<Navigate to="/explore" replace />} />
