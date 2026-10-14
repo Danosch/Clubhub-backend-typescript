@@ -1,17 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ESNext",                 
-    "module": "ESNext",                 
-    "lib": ["DOM", "ESNext"],           
-    "jsx": "react-jsx",                 
-    "strict": true,                     
-    "moduleResolution": "Node",         
-    "esModuleInterop": true,            
-    "skipLibCheck": true,               
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
+    "jsx": "react-jsx",
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "allowJs": true,                    
-    "checkJs": false,                   
-    "noEmit": true                      
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "types": [
+      "vite/client"
+    ],
   },
-  "include": ["src"]                    
+  "include": [
+    "src"
+  ]
 }
