@@ -19,7 +19,7 @@ export class ProfileService extends BaseService {
   /** Update the current user with a partial payload. */
   async updateCurrent(id: string, partial: Partial<User>): Promise<User> {
     const dto = await this.api.request<any>(`/users/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(mapUserToDto(partial)),
     });
     return mapUser(dto);
