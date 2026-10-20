@@ -4,6 +4,7 @@ node_modules/
 
 # Compiled output and incremental TypeScript build cache
 /dist/
+/dist-test/
 *.tsbuildinfo
 
 # Test coverage
