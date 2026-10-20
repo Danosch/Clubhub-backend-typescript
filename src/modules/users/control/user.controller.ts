@@ -1,7 +1,8 @@
-import { Controller, Get, Param, ParseUUIDPipe } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, ParseUUIDPipe } from "@nestjs/common";
 import type { UserDTO } from "../dto/user.dto.js";
 import { UserService } from "../service/user.service.js";
 import { CurrentUserId } from "../../../common/decorator/currentUserId.decorator.js";
+import { UpdateUserDTO } from "../dto/updateUser.dto.js";
 
 /**
  * Handles HTTP requests for user profiles.
@@ -41,6 +42,23 @@ export class UserController {
         @Param('id', new ParseUUIDPipe()) id: string,
     ): Promise<UserDTO> {
         return this.userService.getUserById(id);
+    }
+
+    /**
+     * Partially updates the authenticated user's profile.
+     * 
+     * @param id Id of the user to update.
+     * @param dto Validated profile changes
+     * @param CurrentUserId User ID provided by the authenticated guard.
+     * @returns HTTP 200 with the updated public profile.
+     */
+    @Patch(':id')
+    updateUser(
+        @Param('id', new ParseUUIDPipe()) id: string,
+        @Body() dto: UpdateUserDTO,
+        @CurrentUserId() currentUserId: string
+    ): Promise<UserDTO> {
+        return this.userService.updateUser(id, dto, currentUserId);
     }
 
 }

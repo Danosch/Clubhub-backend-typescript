@@ -7,8 +7,10 @@ import type { UserDTO } from '../dto/user.dto.js';
 import type { User } from '../entity/user.entity.js';
 import { CreateUserMapper } from '../mapper/createUser.mapper.js';
 import { UserMapper } from '../mapper/user.mapper.js';
+import { UpdateUserMapper } from '../mapper/updateUser.mapper.js';
 import { UserRepository } from '../repository/user.repository.js';
 import { UserValidator } from '../validation/user.validation.js';
+import { UpdateUserDTO } from '../dto/updateUser.dto.js';
 
 /**
  * Provides user profile operations.
@@ -56,6 +58,30 @@ export class UserService {
         }
 
         return this.toDto(result.data);
+    }
+
+    /**
+     * Updates the authenticated user's profile.
+     * 
+     * @param id ID of the user to update.
+     * @param dto Editable profile fields.
+     * @param currentUserId ID of the authenticated user.
+     * @returns The updated public user profile.
+     * @throws { ForbiddenException} If the user belongs to another account.
+     * @throws { NotFoundException} If the user does not exist.
+     */
+    async updateUser(
+        id: string,
+        dto: UpdateUserDTO,
+        currentUserId: string
+    ): Promise<UserDTO> {
+        this.userValidator.ensureOwnUser(id, currentUserId);
+
+        const changes = UpdateUserMapper.toEntity(dto);
+        const updatedUser = await this.userRepository.updateUserById(id, changes);
+        const user = this.userValidator.requireUser(updatedUser, id);
+
+        return this.toDto(user);
     }
 
 

@@ -89,4 +89,29 @@ export class UserRepository {
             throw error;
         }
     }
+
+    /**
+     * Updates the supplied profile fields of an existing user.
+     * An empty changes object leaves the profile unchanged.
+     * 
+     * @param id ID of the user to update.
+     * @param changes Profile fields to udpate; omitted fields remain unchanged.
+     * @returns The current user without the password hash, or null if not found.
+     */
+    async updateUserById(
+        id: string,
+        changes: Partial<Pick<User, 'username' | 'description' | 'subject'>>,
+    ): Promise<User | null> {
+        if (Object.keys(changes).length === 0) {
+            return this.findById(id);
+        }
+
+        const result = await this.repository.update({ id }, changes);
+
+        if (result.affected === 0) {
+            return null;
+        }
+
+        return this.findById(id);
+    }
 }

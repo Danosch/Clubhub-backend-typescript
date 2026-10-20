@@ -36,6 +36,7 @@ export function mapUserToDto(p: Partial<User>) {
   if (p.name !== undefined) out.username = p.name;
   if (p.description !== undefined) out.description = p.description;
   if (p.subject !== undefined) out.subject = p.subject;
-  if (p.preferences !== undefined) out.preferences = p.preferences;
+  // will be uncommented as soon as backend allows it.
+  // if (p.preferences !== undefined) out.preferences = p.preferences; 
   return out;
 }
