@@ -10,17 +10,23 @@ export class UpdateUserMapper {
      * Maps supplied properties to their corresponding entity properties.
      * Omitted or null properties are excluded.
      */
-    static toEntity(dto: UpdateUserDTO): Partial<Pick<User, 'username' | 'description'>> {
-        const entityData: Partial<Pick<User, 'username' | 'description'>> = {};
+    static toEntity(dto: UpdateUserDTO): Partial<Pick<User, 'username' | 'description' | 'subject'>> {
+        const changes: Partial<
+            Pick<User, 'username' | 'description' | 'subject'>
+        > = {};
 
         if (dto.username != null) {
-            entityData.username = dto.username;
+            changes.username = dto.username;
         }
 
         if (dto.description != null) {
-            entityData.description = dto.description;
+            changes.description = dto.description;
         }
 
-        return entityData;
+        if (dto.subject != null) {
+            changes.subject = dto.subject;
+        }
+
+        return changes;
     }
 }

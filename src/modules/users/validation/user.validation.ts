@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { ClubHubErrorCode } from "../../../common/exception/clubHubErrorCode.js";
 import { NotFoundException } from "../../../common/exception/notFound.exception.js";
 import { ValidationException } from "../../../common/exception/validation.exception.js";
+import { ForbiddenException } from "../../../common/exception/forbidden.exception.js";
 
 import type { User } from "../entity/user.entity.js";
 
@@ -83,6 +84,25 @@ export class UserValidator {
                     email
                 },
                 sourcePointer: 'email'
+            });
+        }
+    }
+
+    /**
+     * Ensures that the requested user matches the authenticated user
+     * 
+     * @param userId ID of the user to modify.
+     * @param currentUserId ID of the authenticated user.
+     * @throws { ForbiddenException} If the IDs refer to different users.
+     */
+    ensureOwnUser(userId: string, currentUserId: string): void {
+        if (userId.toLowerCase() !== currentUserId.toLowerCase()) {
+            throw new ForbiddenException({
+                errorCode: ClubHubErrorCode.USER_ACCESS_DENIED,
+                title: 'Access denied',
+                details: 'You can only modify your own account.',
+                messageParameters: {},
+                sourcePointer: 'userId'
             });
         }
     }
